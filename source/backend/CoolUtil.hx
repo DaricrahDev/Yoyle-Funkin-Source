@@ -45,6 +45,10 @@ class CoolUtil
 		if(colorNum == null) colorNum = FlxColor.fromString('#$color');
 		return colorNum != null ? colorNum : FlxColor.WHITE;
 	}
+	
+	inline public static function boundTo(value:Float, min:Float, max:Float):Float {
+		return Math.max(min, Math.min(max, value));
+	}
 
 	inline public static function listFromString(string:String):Array<String>
 	{

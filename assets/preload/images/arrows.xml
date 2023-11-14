@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="arrows.png">
+	<!-- Created with Adobe Animate version 21.0.6.41649 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="normal0000" x="25" y="25" width="122" height="116"/>
+	<SubTexture name="normal0001" x="247" y="25" width="122" height="116"/>
+	<SubTexture name="normal0002" x="469" y="25" width="122" height="116"/>
+	<SubTexture name="press0000" x="691" y="25" width="112" height="106"/>
+	<SubTexture name="press0001" x="25" y="241" width="112" height="106"/>
+</TextureAtlas>

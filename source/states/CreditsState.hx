@@ -1,281 +1,230 @@
 package states;
 
-#if MODS_ALLOWED
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.addons.display.FlxTiledSprite;
+import flixel.text.FlxText;
+import flixel.math.FlxMath;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.util.FlxColor;
 import sys.FileSystem;
+import haxe.Json;
+import haxe.format.JsonParser;
 import sys.io.File;
-#end
 
-import objects.AttachedSprite;
-
-class CreditsState extends MusicBeatState
+typedef BioFile =
 {
-	var curSelected:Int = -1;
+	var lore:Array<Array<String>>;
+}
 
-	private var grpOptions:FlxTypedGroup<Alphabet>;
-	private var iconArray:Array<AttachedSprite> = [];
-	private var creditsStuff:Array<Array<String>> = [];
+class CreditsState extends MusicBeatState {
+	public var lores:Array<LoreShit> = [];
+	public var bg:FlxSprite;
+	public var board:FlxSprite;
+	private var theguysGrp:FlxTypedGroup<TheGuys>;
+	private var thedescripGrp:FlxTypedGroup<TheWords>;
+	private static var curSelected:Int = 0;
+	var r_arrow:FlxSprite;
+	var l_arrow:FlxSprite;
+	public static var loreLoresList:BioFile = getLoreFile("assets/data/credits.json");
+	var epicLores:Array<Array<String>>;
 
-	var bg:FlxSprite;
-	var descText:FlxText;
-	var intendedColor:FlxColor;
-	var colorTween:FlxTween;
-	var descBox:AttachedSprite;
-
-	var offsetThing:Float = -75;
-
-	override function create()
-	{
-		#if desktop
-		// Updating Discord Rich Presence
-		DiscordClient.changePresence("In the Menus", null);
-		#end
-
-		persistentUpdate = true;
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		add(bg);
-		bg.screenCenter();
+    override public function create() {
+        super.create();
 		
-		grpOptions = new FlxTypedGroup<Alphabet>();
-		add(grpOptions);
+		epicLores = loreLoresList.lore;
 
-		#if MODS_ALLOWED
-		for (mod in Mods.parseList().enabled) pushModCreditsToList(mod);
-		#end
-
-		var defaultList:Array<Array<String>> = [ //Name - Icon name - Description - Link - BG Color
-			['Psych Engine Team'],
-			['Shadow Mario',		'shadowmario',		'Main Programmer of Psych Engine',								'https://twitter.com/Shadow_Mario_',	'444444'],
-			['Riveren',				'riveren',			'Main Artist/Animator of Psych Engine',							'https://twitter.com/riverennn',		'B42F71'],
-			[''],
-			['Former Engine Members'],
-			['shubs',				'shubs',			'Ex-Programmer of Psych Engine',								'https://twitter.com/yoshubs',			'5E99DF'],
-			['bb-panzu',			'bb',				'Ex-Programmer of Psych Engine',								'https://twitter.com/bbsub3',			'3E813A'],
-			[''],
-			['Engine Contributors'],
-			['iFlicky',				'flicky',			'Composer of Psync and Tea Time\nMade the Dialogue Sounds',		'https://twitter.com/flicky_i',			'9E29CF'],
-			['SqirraRNG',			'sqirra',			'Crash Handler and Base code for\nChart Editor\'s Waveform',	'https://twitter.com/gedehari',			'E1843A'],
-			['EliteMasterEric',		'mastereric',		'Runtime Shaders support',										'https://twitter.com/EliteMasterEric',	'FFBD40'],
-			['PolybiusProxy',		'proxy',			'.MP4 Video Loader Library (hxCodec)',							'https://twitter.com/polybiusproxy',	'DCD294'],
-			['KadeDev',				'kade',				'Fixed some cool stuff on Chart Editor\nand other PRs',			'https://twitter.com/kade0912',			'64A250'],
-			['Keoiki',				'keoiki',			'Note Splash Animations and Latin Alphabet',					'https://twitter.com/Keoiki_',			'D2D2D2'],
-			['superpowers04',		'superpowers04',	'LUA JIT Fork',													'https://twitter.com/superpowers04',	'B957ED'],
-			['Smokey',				'smokey',			'Sprite Atlas Support',											'https://twitter.com/Smokey_5_',		'483D92'],
-			[''],
-			["Funkin' Crew"],
-			['ninjamuffin99',		'ninjamuffin99',	"Programmer of Friday Night Funkin'",							'https://twitter.com/ninja_muffin99',	'CF2D2D'],
-			['PhantomArcade',		'phantomarcade',	"Animator of Friday Night Funkin'",								'https://twitter.com/PhantomArcade3K',	'FADC45'],
-			['evilsk8r',			'evilsk8r',			"Artist of Friday Night Funkin'",								'https://twitter.com/evilsk8r',			'5ABD4B'],
-			['kawaisprite',			'kawaisprite',		"Composer of Friday Night Funkin'",								'https://twitter.com/kawaisprite',		'378FC7']
-		];
+		bg = new FlxSprite().loadGraphic(Paths.image('creditbg', 'preload'));
+		bg.antialiasing = true;
+        
+        add(bg);
 		
-		for(i in defaultList) {
-			creditsStuff.push(i);
-		}
-	
-		for (i in 0...creditsStuff.length)
+		board = new FlxSprite().loadGraphic(Paths.image('creditboard', 'preload'));
+		board.antialiasing = true;
+        
+        add(board);
+		
+		/*lores.push(new LoreShit("Zyro", "Zyro is the leader of the Blue Circles. He controls the first level of the castle.\n\nZyro is similar in personality to a Saturday morning cartoon villain. He's always plotting schemes to get rid of his enemies, most of which don't work. He's prone to getting irrationally upset over it.\n\nTowards his friends, he's very passionate and is great to hang out with! Theres no situation he cant make a little more lighthearted. In some ways, he's immature, always pointing out things that interest him and talking about them endlessly. It can be overbearing, but easy to get used to.", "Jannicide"));
+		lores.push(new LoreShit("Rasher", "Rasher is the leader of the Purple Circles. He controls the second level of the castle.\n\nRasher is agressive and impulsive, and not afraid to speak his mind. He lets his emotions get the better of him much too often. Towards his enemies, hes an unstoppable force. Its best to keep out of his way.\n\nTowards his friends, he makes an effort to be friendlier. Eventually you'll come to find that he's a great listener and consoler! Just... dont play any card games with him or it'll end with the table flipped upside down.", "Jannicide"));
+		lores.push(new LoreShit("Cilus", "Cilus is the leader of the Green Circles. He controls the third level of the castle.\n\nCilus is such a sweetheart! He loves talking to others. Although he can be melancholy at times, he always finds ways to have fun.\n\nTowards his friends, he'll do anything in his power to make them happy. He'll give them small things like candy, origami crafts, or a cool fun fact!", "Jannicide"));
+		lores.push(new LoreShit("Lex", "Lex is the leader of the Red Circles. He controls the fourth level of the castle.\n\nLex is the definition of cold, but not cruel. He's silent, and only talks when it means something. Towards his enemies, he almost always succeeds in ridding of them due to his advanced strategic skills.\n\nTowards his friends, he still keeps his quiet nature, but is a lot less intimidating. He takes notes of what they like and orients his demeanor and conversation topics towards it. He becomes... almost selfless!", "Jannicide"));
+		lores.push(new LoreShit("Iyak", "Iyak is the leader of the Gray Circles, but can command any other circles if needed. He controls the fifth level of the castle.\n\nIyak tries his best to be intimidating, but ends up looking goofy most of the time. His enemies would think otherwise, though.. He doesn't treat them too well.\n\nTowards his friends, he leans fully into his goofy side and becomes much like Zyro, but with more self control. He can be quite the teaser though, so beware of that!", "Jannicide"));
+		lores.push(new LoreShit("Bruce", "Bruce is the main leader of the Cubes. He's part of a royal ''family'' who all have power over their kingdom.\n\nBruce is quite sarcastic. He's quick to point out when someone is doing something wrong. He's not very attentive to stranger's emotions, which is something he's trying to work on. Towards his enemies, he cranks these traits up by 300%.\n\nTowards his friends, he's a lot more attentive to them, but still occasionally throws out a playful insult. He'll always be there to give you a firm pat on the back or a quick pep talk.", "Jannicide"));*/
+
+		for (i in 0...epicLores.length)
 		{
-			var isSelectable:Bool = !unselectableCheck(i);
-			var optionText:Alphabet = new Alphabet(FlxG.width / 2, 300, creditsStuff[i][0], !isSelectable);
-			optionText.isMenuItem = true;
-			optionText.targetY = i;
-			optionText.changeX = false;
-			optionText.snapToPosition();
-			grpOptions.add(optionText);
-
-			if(isSelectable) {
-				if(creditsStuff[i][5] != null)
-				{
-					Mods.currentModDirectory = creditsStuff[i][5];
-				}
-
-				var str:String = 'credits/missing_icon';
-				if (Paths.image('credits/' + creditsStuff[i][1]) != null) str = 'credits/' + creditsStuff[i][1];
-				var icon:AttachedSprite = new AttachedSprite(str);
-				icon.xAdd = optionText.width + 10;
-				icon.sprTracker = optionText;
-	
-				// using a FlxGroup is too much fuss!
-				iconArray.push(icon);
-				add(icon);
-				Mods.currentModDirectory = '';
-
-				if(curSelected == -1) curSelected = i;
-			}
-			else optionText.alignment = CENTERED;
+			lores.push(new LoreShit(epicLores[i][0])); 
 		}
 		
-		descBox = new AttachedSprite();
-		descBox.makeGraphic(1, 1, FlxColor.BLACK);
-		descBox.xAdd = -10;
-		descBox.yAdd = -10;
-		descBox.alphaMult = 0.6;
-		descBox.alpha = 0.6;
-		add(descBox);
-
-		descText = new FlxText(50, FlxG.height + offsetThing - 25, 1180, "", 32);
-		descText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER/*, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK*/);
-		descText.scrollFactor.set();
-		//descText.borderSize = 2.4;
-		descBox.sprTracker = descText;
-		add(descText);
-
-		bg.color = CoolUtil.colorFromString(creditsStuff[curSelected][4]);
-		intendedColor = bg.color;
+		theguysGrp = new FlxTypedGroup<TheGuys>();
+		add(theguysGrp);
+		thedescripGrp = new FlxTypedGroup<TheWords>();
+		add(thedescripGrp);
+		
+		for (i in 0...lores.length)
+		{
+			var theiconthing:TheGuys = new TheGuys(i*700, 0);
+			var loretexx:TheWords = new TheWords();
+			var foundfile:String = "";
+			foundfile = lores[i].char;
+			if (!Paths.fileExists('images/CreditChars/' + foundfile + '.png', IMAGE)) foundfile = 'unknown';
+			
+			theiconthing.loadGraphic(Paths.image('CreditChars/' + foundfile, 'preload'));
+			loretexx.loadGraphic(Paths.image('CreditNames/' + foundfile, 'preload'));
+			theiconthing.TargetX = i - 500;
+			theguysGrp.add(theiconthing);
+			theiconthing.scale.set(1, 1);
+			theiconthing.antialiasing = true;
+			loretexx.screenCenter(Y);
+			loretexx.sprTracker = theiconthing;
+			thedescripGrp.add(loretexx);
+		}
 		changeSelection();
-		super.create();
+		
+		r_arrow = new FlxSprite(1125, 335);
+		r_arrow.frames = Paths.getSparrowAtlas('arrows', 'preload');
+		r_arrow.animation.addByPrefix('normal', 'normal', 12, true);
+		r_arrow.animation.addByPrefix('press', 'press', 16, false);
+		r_arrow.setGraphicSize(Std.int(r_arrow.width * 1));
+		r_arrow.alpha = 0.6;
+		r_arrow.updateHitbox();
+		r_arrow.antialiasing = true;
+		r_arrow.animation.play('normal', true);
+		add(r_arrow);
+
+		l_arrow = new FlxSprite(25, 330);
+		l_arrow.frames = Paths.getSparrowAtlas('arrows', 'preload');
+		l_arrow.animation.addByPrefix('normal', 'normal', 12, true);
+		l_arrow.animation.addByPrefix('press', 'press', 16, false);
+		l_arrow.setGraphicSize(Std.int(l_arrow.width * 1));
+		l_arrow.alpha = 0.6;
+		l_arrow.flipX = true;
+		l_arrow.updateHitbox();
+		l_arrow.antialiasing = true;
+		l_arrow.animation.play('normal', true);
+		add(l_arrow);
+    }
+	
+	var holdTime:Float = 0;
+    override public function update(elapsed:Float) {
+        super.update(elapsed);
+		
+		if(lores.length > 1)
+		{
+			if (controls.UI_LEFT_P)
+			{
+				changeSelection(-1);
+				l_arrow.animation.play('press', false);
+				l_arrow.animation.finishCallback = function (name:String) {
+					l_arrow.animation.play('normal', true);
+				};
+				holdTime = 0;
+			}
+			if (controls.UI_RIGHT_P)
+			{
+				changeSelection(1);
+				r_arrow.animation.play('press', false);
+				r_arrow.animation.finishCallback = function (name:String) {
+					r_arrow.animation.play('normal', true);
+				};
+				holdTime = 0;
+			}
+			if(controls.UI_LEFT_P || controls.UI_RIGHT_P)
+			{
+				var checkLastHold:Int = Math.floor((holdTime - 0.5) * 10);
+				holdTime += elapsed;
+				var checkNewHold:Int = Math.floor((holdTime - 0.5) * 10);
+
+				if(holdTime > 0.5 && checkNewHold - checkLastHold > 0)
+				{
+					changeSelection((checkNewHold - checkLastHold));
+				}
+			}
+			
+		}
+		if (controls.BACK)
+		{
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+			MusicBeatState.switchState(new MainMenuState());
+		}
+    }
+	function changeSelection(change:Int = 0, playSound:Bool = true)
+	{
+		if(playSound) FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
+
+		curSelected += change;
+
+		if (curSelected < 0)
+			curSelected = lores.length - 1;
+		if (curSelected >= lores.length)
+			curSelected = 0;
+		var i = 0;
+		for(item in theguysGrp.members) {
+			item.TargetX = i - curSelected;
+			i++;
+		}
+	}
+	private static function getLoreFile(path:String):BioFile {
+		var rawJson:String = null;
+		#if MODS_ALLOWED
+		if(FileSystem.exists(path)) {
+			rawJson = File.getContent(path);
+		}
+		#else
+		if(OpenFlAssets.exists(path)) {
+			rawJson = Assets.getText(path);
+		}
+		#end
+
+		if(rawJson != null && rawJson.length > 0) {
+			return cast Json.parse(rawJson);
+		}
+		return null;
+	}
+}
+
+class LoreShit
+{
+	public var char:String = ""; // Character Name
+
+	public function new(acter:String)
+	{
+		this.char = acter;
+	}
+}
+
+class TheGuys extends FlxSprite
+{
+
+    public var TargetX:Int;
+
+    public function new(?X:Float = 0, ?Y:Float = 0)
+        {
+            super(X, Y);
+        }
+
+
+    override function update(elapsed:Float) {
+            x = FlxMath.lerp(x, (FlxMath.remapToRange(TargetX, 0, 1, 0, 1.3) * 1280), CoolUtil.boundTo(elapsed * 1, 1, 1));
+            super.update(elapsed);
+        } 
+
+}
+
+class TheWords extends FlxSprite
+{
+	public var sprTracker:FlxSprite;
+	
+	public function new()
+	{
+		super(0, 0);
 	}
 
-	var quitting:Bool = false;
-	var holdTime:Float = 0;
 	override function update(elapsed:Float)
 	{
-		if (FlxG.sound.music.volume < 0.7)
-		{
-			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
-		}
-
-		if(!quitting)
-		{
-			if(creditsStuff.length > 1)
-			{
-				var shiftMult:Int = 1;
-				if(FlxG.keys.pressed.SHIFT) shiftMult = 3;
-
-				var upP = controls.UI_UP_P;
-				var downP = controls.UI_DOWN_P;
-
-				if (upP)
-				{
-					changeSelection(-shiftMult);
-					holdTime = 0;
-				}
-				if (downP)
-				{
-					changeSelection(shiftMult);
-					holdTime = 0;
-				}
-
-				if(controls.UI_DOWN || controls.UI_UP)
-				{
-					var checkLastHold:Int = Math.floor((holdTime - 0.5) * 10);
-					holdTime += elapsed;
-					var checkNewHold:Int = Math.floor((holdTime - 0.5) * 10);
-
-					if(holdTime > 0.5 && checkNewHold - checkLastHold > 0)
-					{
-						changeSelection((checkNewHold - checkLastHold) * (controls.UI_UP ? -shiftMult : shiftMult));
-					}
-				}
-			}
-
-			if(controls.ACCEPT && (creditsStuff[curSelected][3] == null || creditsStuff[curSelected][3].length > 4)) {
-				CoolUtil.browserLoad(creditsStuff[curSelected][3]);
-			}
-			if (controls.BACK)
-			{
-				if(colorTween != null) {
-					colorTween.cancel();
-				}
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				MusicBeatState.switchState(new MainMenuState());
-				quitting = true;
-			}
-		}
-		
-		for (item in grpOptions.members)
-		{
-			if(!item.bold)
-			{
-				var lerpVal:Float = FlxMath.bound(elapsed * 12, 0, 1);
-				if(item.targetY == 0)
-				{
-					var lastX:Float = item.x;
-					item.screenCenter(X);
-					item.x = FlxMath.lerp(lastX, item.x - 70, lerpVal);
-				}
-				else
-				{
-					item.x = FlxMath.lerp(item.x, 200 + -40 * Math.abs(item.targetY), lerpVal);
-				}
-			}
-		}
 		super.update(elapsed);
-	}
-
-	var moveTween:FlxTween = null;
-	function changeSelection(change:Int = 0)
-	{
-		FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
-		do {
-			curSelected += change;
-			if (curSelected < 0)
-				curSelected = creditsStuff.length - 1;
-			if (curSelected >= creditsStuff.length)
-				curSelected = 0;
-		} while(unselectableCheck(curSelected));
-
-		var newColor:FlxColor = CoolUtil.colorFromString(creditsStuff[curSelected][4]);
-		trace('The BG color is: $newColor');
-		if(newColor != intendedColor) {
-			if(colorTween != null) {
-				colorTween.cancel();
-			}
-			intendedColor = newColor;
-			colorTween = FlxTween.color(bg, 1, bg.color, intendedColor, {
-				onComplete: function(twn:FlxTween) {
-					colorTween = null;
-				}
-			});
-		}
-
-		var bullShit:Int = 0;
-
-		for (item in grpOptions.members)
-		{
-			item.targetY = bullShit - curSelected;
-			bullShit++;
-
-			if(!unselectableCheck(bullShit-1)) {
-				item.alpha = 0.6;
-				if (item.targetY == 0) {
-					item.alpha = 1;
-				}
-			}
-		}
-
-		descText.text = creditsStuff[curSelected][2];
-		descText.y = FlxG.height - descText.height + offsetThing - 60;
-
-		if(moveTween != null) moveTween.cancel();
-		moveTween = FlxTween.tween(descText, {y : descText.y + 75}, 0.25, {ease: FlxEase.sineOut});
-
-		descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
-		descBox.updateHitbox();
-	}
-
-	#if MODS_ALLOWED
-	function pushModCreditsToList(folder:String)
-	{
-		var creditsFile:String = null;
-		if(folder != null && folder.trim().length > 0) creditsFile = Paths.mods(folder + '/data/credits.txt');
-		else creditsFile = Paths.mods('data/credits.txt');
-
-		if (FileSystem.exists(creditsFile))
-		{
-			var firstarray:Array<String> = File.getContent(creditsFile).split('\n');
-			for(i in firstarray)
-			{
-				var arr:Array<String> = i.replace('\\n', '\n').split("::");
-				if(arr.length >= 5) arr.push(folder);
-				creditsStuff.push(arr);
-			}
-			creditsStuff.push(['']);
-		}
-	}
-	#end
-
-	private function unselectableCheck(num:Int):Bool {
-		return creditsStuff[num].length <= 1;
+		
+		if (sprTracker != null)
+			setPosition(sprTracker.x, this.y);
 	}
 }
